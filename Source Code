@@ -1,0 +1,208 @@
+Source code:
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+# Sample user-item rating data
+data = {
+'User': ['Alice', 'Alice', 'Alice', 'Bob', 'Bob', 'Charlie', 'Charlie', 'David'],
+'Item': ['Book1', 'Book2', 'Book3', 'Book1', 'Book4', 'Book2', 'Book4', 'Book3'],
+'Rating': [5, 3, 4, 4, 2, 5, 4, 3]
+}
+# Create DataFrame
+df = pd.DataFrame(data)
+# Pivot to get User-Item Matrix
+user_item_matrix = df.pivot_table(index='User', columns='Item', values='Rating').fillna(0)
+# Normalize the ratings
+scaler = StandardScaler()
+normalized_matrix = scaler.fit_transform(user_item_matrix)
+# Compute Cosine Similarity
+similarity_matrix = cosine_similarity(normalized_matrix)
+similarity_df = pd.DataFrame(similarity_matrix, index=user_item_matrix.index,
+columns=user_item_matrix.index)
+# Function to get top N similar users
+def get_similar_users(user_name, n=2):
+return similarity_df[user_name].sort_values(ascending=False)[1:n+1]
+# Function to recommend items
+def recommend_items(target_user, top_n_similar_users=2):
+similar_users = get_similar_users(target_user, top_n_similar_users)
+user_data = user_item_matrix.loc[target_user]
+recommendations = pd.Series(dtype='float64')
+for user in similar_users.index:
+weights = similar_users[user]
+user_ratings = user_item_matrix.loc[user]
+for item in user_ratings.index:
+if user_data[item] == 0: # Recommend only unseen items
+if item in recommendations:
+recommendations[item] += user_ratings[item] * weights
+else:
+recommendations[item] = user_ratings[item] * weights
+return recommendations.sort_values(ascending=False)
+# Example: Recommend for Alice
+print("Recommendations for Alice:")
+print(recommend_items("Alice"))
+Libraries Required
+pip install pandas scikit-learn
+Content Based Recommendation
+import numpy as np
+# Sample item features (e.g., item genres, categories, etc.)
+item_features = {
+'Book1': [1, 0, 0],
+'Book2': [0, 1, 0],
+'Book3': [0, 0, 1],
+'Book4': [1, 1, 0]
+}
+# Convert item features into DataFrame
+item_features_df = pd.DataFrame(item_features).T
+# Compute Cosine Similarity for item features
+item_similarity = cosine_similarity(item_features_df)
+item_similarity_df = pd.DataFrame(item_similarity, index=item_features_df.index,
+columns=item_features_df.index)
+# Content-based Recommendation Function
+def content_based_recommendations(target_user):
+user_ratings = user_item_matrix.loc[target_user]
+recommendations = pd.Series(dtype='float64')
+# Loop through items that the user hasn't rated yet
+for item in user_ratings[user_ratings == 0].index:
+item_similarities = item_similarity_df[item]
+weighted_sum = 0
+for other_item, rating in user_ratings.items():
+if rating > 0: # Only consider rated items
+weighted_sum += rating * item_similarities[other_item]
+recommendations[item] = weighted_sum
+return recommendations.sort_values(ascending=False)
+# Example: Content-based recommendations for Alice
+print("Content-based Recommendations for Alice:")
+print(content_based_recommendations("Alice"))
+User input interface
+import React, { useState } from 'react';
+function UserInputForm() {
+const [category, setCategory] = useState('');
+const [priceRange, setPriceRange] = useState([0, 1000]);
+const [rating, setRating] = useState(0);
+const handleSubmit = (e) => {
+e.preventDefault();
+// Send data to the backend
+fetch('/api/recommendations', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ category, priceRange, rating })
+})
+.then(response => response.json())
+.then(data => {
+// Handle the recommendation data
+console.log(data);
+});
+};
+return (
+<div className="form-container">
+<h2>Enter Your Preferences</h2>
+<form onSubmit={handleSubmit}>
+<label>Category</label>
+<select value={category} onChange={(e) => setCategory(e.target.value)}>
+<option value="electronics">Electronics</option>
+<option value="fashion">Fashion</option>
+<option value="books">Books</option>
+</select>
+<label>Price Range</label>
+<input type="range" min="0" max="1000" value={priceRange[0]} onChange={(e)
+=> setPriceRange([e.target.value, priceRange[1]])} />
+<input type="range" min="0" max="1000" value={priceRange[1]} onChange={(e)
+=> setPriceRange([priceRange[0], e.target.value])} />
+<label>Rating</label>
+<input type="number" min="0" max="5" value={rating} onChange={(e) =>
+setRating(e.target.value)} />
+<button type="submit">Get Recommendations</button>
+</form>
+</div>
+);
+}
+export default UserInputForm;
+Recommendation output with item names and scores
+import React, { useEffect, useState } from 'react';
+function RecommendationOutput() {
+const [recommendations, setRecommendations] = useState([]);
+useEffect(() => {
+// Mocking the backend response
+const mockData = [
+{
+name: "Item 1",
+description: "High-quality electronic item",
+score: 85,
+imageUrl: "https://via.placeholder.com/150"
+},
+{
+name: "Item 2",
+description: "Affordable fashion piece",
+score: 78,
+imageUrl: "https://via.placeholder.com/150"
+}
+];
+setRecommendations(mockData);
+// If you're connecting to a real backend, use this:
+/*
+fetch('/api/recommendations')
+.then(response => response.json())
+.then(data => setRecommendations(data));
+*/
+}, []);
+return (
+<div className="recommendation-container">
+<h2>Your Recommendations</h2>
+<div className="recommendations-list">
+{recommendations.map((item, index) => (
+<div className="recommendation-item" key={index}>
+<img src={item.imageUrl} alt={item.name} />
+<h3>{item.name}</h3>
+<p>{item.description}</p>
+<p>Score: {item.score}</p>
+<button>More Info</button>
+</div>
+))}
+</div>
+</div>
+);
+}
+export default RecommendationOutput;
+Feedback submission screen
+import React, { useState } from 'react';
+function FeedbackForm() {
+const [rating, setRating] = useState(0);
+const [comments, setComments] = useState('');
+const handleFeedbackSubmit = (e) => {
+e.preventDefault();
+const feedbackData = { rating, comments };
+// Send feedback to the backend
+fetch('/api/feedback', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(feedbackData)
+})
+.then(response => response.json())
+.then(data => {
+alert('Thank you for your feedback!');
+});
+};
+return (
+<div className="feedback-container">
+<h2>Submit Your Feedback</h2>
+<form onSubmit={handleFeedbackSubmit}>
+<label>Rating (1-5)</label>
+<input
+type="number"
+min="1"
+max="5"
+value={rating}
+onChange={(e) => setRating(e.target.value)}
+/>
+<label>Comments</label>
+<textarea
+value={comments}
+onChange={(e) => setComments(e.target.value)}
+placeholder="Enter your feedback here..."
+/>
+<button type="submit">Submit Feedback</button>
+</form>
+</div>
+);
+}
+export default FeedbackForm;
